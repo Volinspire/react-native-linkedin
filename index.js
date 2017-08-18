@@ -16,6 +16,7 @@ import {
   // $DisableFlow
 } from 'react-native'
 import PropTypes from 'prop-types'
+import URL from 'url-parse';
 import { pipe, evolve, propSatisfies, applySpec, propOr } from 'ramda'
 import { v4 } from 'uuid'
 import querystring from 'query-string'
@@ -119,12 +120,12 @@ export const injectedJavaScript = () =>
   '.setAttribute("autocapitalize", "off")'
 
 export const fetchToken: string => Promise<LinkedInToken> = async payload => {
-  const response = await fetch(ACCESS_TOKEN_URL, {
-    method: 'POST',
+  const response = await fetch(`${ACCESS_TOKEN_URL}?${payload}`, {
+    method: 'GET',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: payload,
+   /* body: payload,*/
   })
   return await response.json()
 }
@@ -194,15 +195,17 @@ export default class LinkedInModal extends React.Component {
     const { raceCondition } = this.state
     const { redirectUri, onError } = this.props
 
-    if (url.includes(redirectUri) && !raceCondition) {
+    if (url.includes(redirectUri)) {
       this.setState({ modalVisible: false, raceCondition: true })
+      this.raceCondition = true;
       if (isErrorUrl(url)) {
         const err = getErrorFromUrl(url)
         this.close()
         onError(transformError(err))
       } else {
         const { authState, onSuccess } = this.props
-        const { code, state } = getCodeAndStateFromUrl(url)
+        const { pathname, query, hash } = new URL(url, true);
+        const { code, state } = query;
         if (state !== authState) {
           onError({
             type: 'state_not_match',
